@@ -1,0 +1,15 @@
+# -------------------------------------------------
+# Netlify configuration – placed at the repo root
+# -------------------------------------------------
+
+[build]
+  # All static files (index.html, CSS, images…) are in the repo root.
+  # Tell Netlify to publish that folder.
+  publish = "."
+
+# Friendly alias: /api/reward → the Netlify function
+[[redirects]]
+  from = "/api/reward"
+  to = "/.netlify/functions/reward"
+  status = 200
+  force = true
