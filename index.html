@@ -36,37 +36,49 @@
 
 <script>
 /* -------------------------------------------------------------
-   ★★★★★  YOUR GOOGLE APPS SCRIPT ENDPOINT IS SET BELOW ★★★★★
+   ★★★★★  SHARED SECRET TOKEN  ★★★★★
    ------------------------------------------------------------- */
-const SERVER_URL = 'https://script.google.com/macros/s/AKfycbzItqydu93nPJAG_5aP4734QE_wHxNor-TQtfun2gi05oS1EX3G_IT-0_tfetBngahSbw/exec';
-/* -------------------------------------------------------------
-   The rest of the script uses SERVER_URL for all fetch calls.
-------------------------------------------------------------- */
+const SECRET_TOKEN = "c4id3n-7x9-qrty-2bmv";   // <-- keep identical to the token in the Netlify function
 
+/* -------------------------------------------------------------
+   Netlify function endpoint (same origin, no CORS issues)
+   ------------------------------------------------------------- */
+const REWARD_ENDPOINT = "/api/reward";
+
+/* -------------------------------------------------------------
+   Helper – extract ?yt=CHANNEL_ID from the URL
+   ------------------------------------------------------------- */
 function getViewerId() {
-  // Expect "?yt=CHANNEL_ID" in the URL.
   const p = new URLSearchParams(location.search);
   return p.get('yt');
 }
 
-/* ---------- Load current points ---------- */
+/* ---------- Load current points (GET) ---------- */
 async function loadPoints(ytId) {
-  const r = await fetch(`${SERVER_URL}?ytId=${encodeURIComponent(ytId)}`);
-  const d = await r.json();
+  const url = `${REWARD_ENDPOINT}?yt=${encodeURIComponent(ytId)}&action=getPoints&token=${encodeURIComponent(SECRET_TOKEN)}`;
+  const r   = await fetch(url);
+  const d   = await r.json();
   document.getElementById('points').textContent = d.points ?? 0;
 }
 
-/* ---------- Claim a reward ---------- */
+/* ---------- Claim a reward (POST) ---------- */
 async function claimReward(ytId, rewardId) {
-  const r = await fetch(SERVER_URL, {
+  const payload = {
+    ytId,
+    rewardId,
+    token: SECRET_TOKEN
+  };
+
+  const r = await fetch(REWARD_ENDPOINT, {
     method: 'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ ytId, rewardId })
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
   });
+
   const d = await r.json();
   if (d.success) {
     alert(`✅ Reward claimed! Remaining points: ${d.remaining}`);
-    loadPoints(ytId);
+    loadPoints(ytId);               // refresh displayed balance
   } else {
     alert(`❌ ${d.error ?? 'Unknown error'}`);
   }
