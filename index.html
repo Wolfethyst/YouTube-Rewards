@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>YouTube Rewards Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body{font-family:Inter,Helvetica,sans-serif;background:#111;color:#eee;margin:0;padding:2rem;}
+  .card{background:#222;padding:1.5rem;border-radius:8px;margin-bottom:1rem;max-width:400px;}
+  .title{font-size:1.4rem;margin-bottom:.5rem;}
+  .pts{font-size:1.2rem;color:#9f6cff;margin-bottom:.5rem;}
+  button{background:#9f6cff;color:#111;padding:.6rem 1rem;border:none;border-radius:4px;cursor:pointer;}
+  button:disabled{background:#555;cursor:not-allowed;}
+</style>
+</head>
+
+<body>
+
+<h1>YouTube Rewards Hub</h1>
+
+<div id="status">🔎 Detecting you…</div>
+
+<div id="hub" style="display:none;">
+  <div class="card">
+    <div class="title">Your Points</div>
+    <div class="pts" id="points">—</div>
+  </div>
+
+  <div class="card">
+    <div class="title">Choose a Reward</div>
+    <button data-reward="tts">💬 TTS (100 pts)</button>
+    <button data-reward="shoutout">📣 Shout‑out (250 pts)</button>
+    <!-- add more buttons as you define new rewards -->
+  </div>
+</div>
+
+<script>
+/* -------------------------------------------------------------
+   ★★★★★  YOUR GOOGLE APPS SCRIPT ENDPOINT IS SET BELOW ★★★★★
+   ------------------------------------------------------------- */
+const SERVER_URL = 'https://script.google.com/macros/s/AKfycbzItqydu93nPJAG_5aP4734QE_wHxNor-TQtfun2gi05oS1EX3G_IT-0_tfetBngahSbw/exec';
+/* -------------------------------------------------------------
+   The rest of the script uses SERVER_URL for all fetch calls.
+------------------------------------------------------------- */
+
+function getViewerId() {
+  // Expect "?yt=CHANNEL_ID" in the URL.
+  const p = new URLSearchParams(location.search);
+  return p.get('yt');
+}
+
+/* ---------- Load current points ---------- */
+async function loadPoints(ytId) {
+  const r = await fetch(`${SERVER_URL}?ytId=${encodeURIComponent(ytId)}`);
+  const d = await r.json();
+  document.getElementById('points').textContent = d.points ?? 0;
+}
+
+/* ---------- Claim a reward ---------- */
+async function claimReward(ytId, rewardId) {
+  const r = await fetch(SERVER_URL, {
+    method: 'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ ytId, rewardId })
+  });
+  const d = await r.json();
+  if (d.success) {
+    alert(`✅ Reward claimed! Remaining points: ${d.remaining}`);
+    loadPoints(ytId);
+  } else {
+    alert(`❌ ${d.error ?? 'Unknown error'}`);
+  }
+}
+
+/* ---------- Initialise page ---------- */
+(async () => {
+  const ytId = getViewerId();
+  if (!ytId) {
+    document.getElementById('status').textContent =
+      '⚠️ No YouTube ID supplied. Append "?yt=YOUR_CHANNEL_ID" to the URL.';
+    return;
+  }
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('hub').style.display = 'block';
+
+  await loadPoints(ytId);
+
+  // Wire up the buttons
+  document.querySelectorAll('button[data-reward]').forEach(btn => {
+    btn.addEventListener('click', () => claimReward(ytId, btn.dataset.reward));
+  });
+})();
+</script>
+</body>
+</html>
